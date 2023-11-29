@@ -1,8 +1,16 @@
+using Microsoft.EntityFrameworkCore;
+using PayOffPalApi.Data;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+var connectionString = builder.Configuration.GetConnectionString("PayOffPalDbConnectionString");
+builder.Services.AddDbContext<PayOffPalDbContext>(options =>
+{
+    options.UseSqlServer(connectionString);
+});
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
