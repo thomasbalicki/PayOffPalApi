@@ -1,0 +1,6 @@
+@PayOffPalApi_HostAddress = http://localhost:5170
+
+GET {{PayOffPalApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
