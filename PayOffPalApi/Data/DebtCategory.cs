@@ -6,7 +6,7 @@
         public string Name { get; set; }
 
         // Navigation property (Has a list of debts associated with category)
-        public IList<Debt> Debts { get; set; }
+        public virtual IList<Debt> Debts { get; set; }
     }
 
 }

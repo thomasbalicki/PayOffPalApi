@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PayOffPalApi.Contracts;
 using PayOffPalApi.Data;
+using PayOffPalApi.Models.DebtCategory;
 
 namespace PayOffPalApi.Controllers
 {
@@ -13,54 +17,66 @@ namespace PayOffPalApi.Controllers
     [ApiController]
     public class DebtCategoriesController : ControllerBase
     {
-        private readonly PayOffPalDbContext _context;
+        private readonly IMapper _mapper;
+        private readonly IDebtCategoryRepository _debtCategoryRepository;
 
-        public DebtCategoriesController(PayOffPalDbContext context)
+        public DebtCategoriesController(IMapper mapper, IDebtCategoryRepository debtCategoryRepository)
         {
-            _context = context;
+            _mapper = mapper;
+            _debtCategoryRepository = debtCategoryRepository;
         }
 
         // GET: api/DebtCategories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<DebtCategory>>> GetDebtCategories()
+        public async Task<ActionResult<IEnumerable<GetDebtCategoryDto>>> GetDebtCategories()
         {
-            var debtCategories = await _context.DebtCategories.ToListAsync();
-            return Ok(debtCategories);
+            var debtCategories = await _debtCategoryRepository.GetAllAsync();
+            var records = _mapper.Map<List<GetDebtCategoryDto>>(debtCategories);
+            return Ok(records);
         }
 
         // GET: api/DebtCategories/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<DebtCategory>> GetDebtCategory(int id)
+        public async Task<ActionResult<DebtCategoryDto>> GetDebtCategory(int id)
         {
-            var debtCategory = await _context.DebtCategories.FindAsync(id);
+            var debtCategory = await _debtCategoryRepository.GetDetails(id);
 
             if (debtCategory == null)
             {
                 return NotFound();
             }
 
-            return Ok(debtCategory);
+            var debtCategoryDto = _mapper.Map<DebtCategoryDto>(debtCategory);
+
+            return Ok(debtCategoryDto);
         }
 
         // PUT: api/DebtCategories/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutDebtCategory(int id, DebtCategory debtCategory)
+        public async Task<IActionResult> PutDebtCategory(int id, UpdateDebtCategoryDto updateDebtCategoryDto)
         {
-            if (id != debtCategory.DebtCategoryId)
+            if (id != updateDebtCategoryDto.DebtCategoryId)
             {
                 return BadRequest();
             }
 
-            _context.Entry(debtCategory).State = EntityState.Modified;
+            var debtCategory = await _debtCategoryRepository.GetAsync(id);
+
+            if ( debtCategory == null)
+            {
+                return NotFound();
+            }
+
+            _mapper.Map(updateDebtCategoryDto, debtCategory);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _debtCategoryRepository.UpdateAsync(debtCategory);
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!DebtCategoryExists(id))
+                if (!await DebtCategoryExists(id))
                 {
                     return NotFound();
                 }
@@ -76,33 +92,33 @@ namespace PayOffPalApi.Controllers
         // POST: api/DebtCategories
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<DebtCategory>> PostDebtCategory(DebtCategory debtCategory)
+        public async Task<ActionResult<DebtCategory>> PostDebtCategory(CreateDebtCategoryDto createDebtCategory)
         {
-            _context.DebtCategories.Add(debtCategory);
-            await _context.SaveChangesAsync();
+            var debtCategory = _mapper.Map<DebtCategory>(createDebtCategory);
 
-            return CreatedAtAction("GetDebtCategory", new { id = debtCategory.DebtCategoryId }, debtCategory);
+            await _debtCategoryRepository.AddAsync(debtCategory);
+
+            return Ok();
         }
 
         // DELETE: api/DebtCategories/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDebtCategory(int id)
         {
-            var debtCategory = await _context.DebtCategories.FindAsync(id);
+            var debtCategory = await _debtCategoryRepository.GetAsync(id);
             if (debtCategory == null)
             {
                 return NotFound();
             }
 
-            _context.DebtCategories.Remove(debtCategory);
-            await _context.SaveChangesAsync();
+            await _debtCategoryRepository.DeleteAsync(id);
 
             return NoContent();
         }
 
-        private bool DebtCategoryExists(int id)
+        private async Task<bool> DebtCategoryExists(int id)
         {
-            return _context.DebtCategories.Any(e => e.DebtCategoryId == id);
+            return await _debtCategoryRepository.Exists(id);
         }
     }
 }

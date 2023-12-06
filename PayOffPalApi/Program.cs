@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using PayOffPalApi.Configurations;
+using PayOffPalApi.Contracts;
 using PayOffPalApi.Data;
+using PayOffPalApi.Repository;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +26,11 @@ builder.Services.AddCors(options =>
 });
 
 builder.Host.UseSerilog((ctx, lc) => lc.WriteTo.Console().ReadFrom.Configuration(ctx.Configuration));
+
+builder.Services.AddAutoMapper(typeof(MapperConfig));
+
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IDebtCategoryRepository, DebtCategoriesRepository>();
 
 var app = builder.Build();
 
